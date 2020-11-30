@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Shared folders: Needs smbd and gawk
-import os, sys, errno, socket, subprocess, uuid
+import os, sys, errno, socket, subprocess, uuid, telnetlib, time
 from enum import Enum
 
 # Mini error handling lib:
@@ -320,19 +320,13 @@ def program_subprocess_fix_smb():
     os.remove(script_fpath)
 
 def program_change_vnc_pwd(args):
-    env_cpy = os.environ.copy()
-    script_fpath="/tmp/qemurun_{}.sh".format(str(uuid.uuid4()))
-    script_contents= """#!/bin/bash
-        sleep 7s && \
-        printf "change vnc password\n%s\n" @vnc_pwd@ | \
-        /dev/tcp/127.0.0.1/@telnet_port@"""
-    script_contents = script_contents.replace('@vnc_pwd@', args['vnc_pwd'])
-    script_contents = script_contents.replace('@telnet_port@', str(args['telnet_port']))
-    script_fh = open(script_fpath, "w+")
-    script_fh.write(script_contents)
-    script_fh.close()
-    subprocess.Popen(['bash', script_fpath], env=env_cpy).wait()
-    os.remove(script_fpath)
+    time.sleep(7)
+    port = args['telnet_port']
+    msg = "change vnc password\n{}\n".format(args['vnc_pwd'])
+    host = "127.0.0.1"
+    timeout = 100
+    with telnetlib.Telnet(host, port, timeout) as session:
+        session.write(msg.encode('utf-8'))
 
 def program_main():
     print("qemu-run. Forever beta software. Use on production on your own risk!\n")
