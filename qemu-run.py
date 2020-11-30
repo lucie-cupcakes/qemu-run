@@ -105,11 +105,12 @@ def program_find_vm_location():
 	vm_dir = ''
 	# Use environment variable to find where the VM is
 	if len(sys.argv) == 1: # No args.
-		rc.set_error(InfoMsg('Warning: No arguments, assuming the VM is in CWD.', InfoMsgType.im_warning))
+		rc.set_error(InfoMsg('Warning: No arguments, assuming the VM is in CWD.'))
 		vm_dir = os.getcwd()
 	else:
-		if len(sys.argv) >= 2 and sys.argv[2].find('--cfg=') != -1:
-
+		if len(sys.argv) >= 1 and sys.argv[1].find('--cfg=') != -1:
+			vm_dir = os.getcwd()
+			vm_name = "QEMU-VM"
 		else:
 			# Normal lookup using ENV var
 			try:
@@ -155,9 +156,15 @@ def program_get_cfg_values(vm_dir):
 	# Load Config File
 	vm_cfg_file_path = '{}/config'.format(vm_dir)
 	if os.path.isfile(vm_cfg_file_path):
-		cfg = load_cfg(vm_cfg_file_path, cfg)
+		cfg = load_cfg_from_file(vm_cfg_file_path, cfg)
 	else:
-		rc.set_error(InfoMsg('Cannot find config file.'))
+		if len(sys.argv) >= 1 and sys.argv[1].find('--cfg=') != -1:
+			arg_v = sys.argv[1].split('--cfg=')[1]
+			print(arg_v)
+			exit()
+			cfg = load_cfg_from_args()
+		else:
+			rc.set_error(InfoMsg('Cannot find config file.'))
 
 	return rc, cfg
 
