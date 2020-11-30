@@ -18,7 +18,7 @@ class ReturnCode:
 	def __init__(self, ok=True, msg=None): #op_success = Boolean, infomsg = InfoMsg class.
 		self.ok = ok
 		self.msg = msg
-	def set_error(err_msg):
+	def set_error(self, err_msg):
 		self.ok = False
 		self.msg = err_msg
 
@@ -98,6 +98,13 @@ def get_usable_port():
 	sock.close()
 	return port
 
+def detect_if_cfg_is_in_args():
+	res = False
+	if len(sys.argv) >= 2:
+		if sys.argv[1].find('--cfg=') != -1:
+			res = True
+	return res
+
 def program_find_vm_location():
 	# return values=
 	rc = ReturnCode()
@@ -105,10 +112,10 @@ def program_find_vm_location():
 	vm_dir = ''
 	# Use environment variable to find where the VM is
 	if len(sys.argv) == 1: # No args.
-		rc.set_error(InfoMsg('Warning: No arguments, assuming the VM is in CWD.'))
+		rc.set_error(InfoMsg('Warning: No arguments, assuming the VM is in CWD.', InfoMsgType.im_warning))
 		vm_dir = os.getcwd()
 	else:
-		if len(sys.argv) >= 1 and sys.argv[1].find('--cfg=') != -1:
+		if detect_if_cfg_is_in_args() == True:
 			vm_dir = os.getcwd()
 			vm_name = "QEMU-VM"
 		else:
@@ -158,7 +165,7 @@ def program_get_cfg_values(vm_dir):
 	if os.path.isfile(vm_cfg_file_path):
 		cfg = load_cfg_from_file(vm_cfg_file_path, cfg)
 	else:
-		if len(sys.argv) >= 1 and sys.argv[1].find('--cfg=') != -1:
+		if detect_if_cfg_is_in_args() == True:
 			arg_v = sys.argv[1].split('--cfg=')[1]
 			print(arg_v)
 			exit()
@@ -257,10 +264,10 @@ def program_build_cmd_line(cfg, vm_name, vm_dir):
 def program_handle_rc(rc):
 	if rc.ok == False:
 		if rc.msg.msg_type == InfoMsgType.im_error:
-			print(rc.msg)
+			print(rc.msg.msg_txt)
 			exit()
 		elif rc.msg.msg_type == InfoMsgType.im_warning or rc.msg.msg_type == InfoMsgType.im_info:
-			print(rc.msg)
+			print(rc.msg.msg_txt)
 
 def program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port=0):
 	sp = subprocess.Popen(qemu_cmd, env=qemu_env, cwd=vm_dir)
@@ -271,7 +278,7 @@ def program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port=0):
 
 def program_subprocess_fix_smb():
 	env_cpy = os.environ.copy()
-	return subprocess.Popen(['bash', '/home/lucie/.conf_files/scripts/qemu_fix_smb.sh'], env=env_cpy)
+	return subprocess.Popen(['bash', 'qemu_fix_smb.sh'], env=env_cpy)
 
 def program_main():
 	print("qemu-run. Forever beta software. Use on production on your own risk!\n")
