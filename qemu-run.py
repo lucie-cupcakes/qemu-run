@@ -179,7 +179,7 @@ def program_get_cfg_values(vm_dir):
                 rc.set_error(InfoMsg('Error: argument cfg is empty.'))
                 return rc, None
 
-            cfg = load_cfg_from_args()
+            cfg = load_cfg_from_args(arg_cfg_str)
         else:
             rc.set_error(InfoMsg('Cannot find config file.'))
 
@@ -313,6 +313,9 @@ def program_subprocess_fix_smb():
         fi
         sleep 5s
         done"""
+    script_fh = open(script_fpath, "w+")
+    script_fh.write(script_contents)
+    script_fh.close()
     subprocess.Popen(['bash', script_fpath], env=env_cpy).wait()
     os.remove(script_fpath)
 
@@ -320,11 +323,14 @@ def program_change_vnc_pwd(args):
     env_cpy = os.environ.copy()
     script_fpath="/tmp/qemurun_{}.sh".format(str(uuid.uuid4()))
     script_contents= """#!/bin/bash
-        sleep 10s && \
+        sleep 7s && \
         printf "change vnc password\n%s\n" @vnc_pwd@ | \
         /dev/tcp/127.0.0.1/@telnet_port@"""
     script_contents = script_contents.replace('@vnc_pwd@', args['vnc_pwd'])
     script_contents = script_contents.replace('@telnet_port@', args['telnet_port'])
+    script_fh = open(script_fpath, "w+")
+    script_fh.write(script_contents)
+    script_fh.close()
     subprocess.Popen(['bash', script_fpath], env=env_cpy).wait()
     os.remove(script_fpath)
 
