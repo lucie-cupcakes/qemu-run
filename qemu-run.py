@@ -228,9 +228,9 @@ def program_build_cmd_line(cfg, vm_name, vm_dir):
         qemu_cmd += ['-monitor', 'telnet:127.0.0.1:{},server,nowait'.format(telnet_port)]
         
         if cfg['vnc_pwd'] != '':
-            qemu_cmd += ['-vnc', '127.0.0.1:5900,password']
+            qemu_cmd += ['-vnc', '127.0.0.1:0,password']
         else:
-            qemu_cmd += ['-vnc', '127.0.0.1:5900']
+            qemu_cmd += ['-vnc', '127.0.0.1:0']
 
         qemu_cmd += ['-display', 'none']
     else:
@@ -327,7 +327,7 @@ def program_change_vnc_pwd(args):
         printf "change vnc password\n%s\n" @vnc_pwd@ | \
         /dev/tcp/127.0.0.1/@telnet_port@"""
     script_contents = script_contents.replace('@vnc_pwd@', args['vnc_pwd'])
-    script_contents = script_contents.replace('@telnet_port@', args['telnet_port'])
+    script_contents = script_contents.replace('@telnet_port@', str(args['telnet_port']))
     script_fh = open(script_fpath, "w+")
     script_fh.write(script_contents)
     script_fh.close()
@@ -350,22 +350,17 @@ def program_main():
     qemu_env['QEMU_AUDIO_DRV'] = 'pa'
     #qemu_env['QEMU_PA_SERVER'] = pulseaudio_socket
 
-    print_cmd = False
-    if len(sys.argv) == 3:
-        if sys.argv[2] == '--print-cmd':
-            print_cmd = True
-    if print_cmd:
-        #print(' '.join(qemu_cmd))
-        print(*qemu_cmd)
-    else:
-        if os.path.exists(cfg['shared']):
-            spawn_daemon(program_subprocess_fix_smb)
-        if cfg['vnc_pwd'] != '':
-            args = {}
-            args['vnc_pwd'] = cfg['vnc_pwd']
-            args['telnet_port'] = telnet_port
-            spawn_daemon(program_change_vnc_pwd, args)
-        program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port).wait()
+    print("Command line arguments:")
+    print(*qemu_cmd)
+
+    if os.path.exists(cfg['shared']):
+        spawn_daemon(program_subprocess_fix_smb)
+    if cfg['vnc_pwd'] != '':
+        args = {}
+        args['vnc_pwd'] = cfg['vnc_pwd']
+        args['telnet_port'] = telnet_port
+        spawn_daemon(program_change_vnc_pwd, args)
+    program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port).wait()
 
 if __name__ == '__main__':
     program_main()
