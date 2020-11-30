@@ -26,7 +26,7 @@ class ReturnCode:
 
 # My replacement for configobj, fuck that shit.
 def load_cfg_process(res, lines):
-    for line in fh.readlines():
+    for line in lines:
         if line.find('=') != -1:
             sline = line.split('=')
             res[sline[0].strip()] = sline[1].strip()
