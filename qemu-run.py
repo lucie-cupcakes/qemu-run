@@ -290,6 +290,17 @@ def program_handle_rc(rc):
             elif msg.msg_type == InfoMsgType.im_warning or msg.msg_type == InfoMsgType.im_info:
                 print(msg.msg_txt)
 
+def execute_bash_code(contents):
+    fpath = "/tmp/qemurun_{}.sh".format(str(uuid.uuid4()))
+    fh = open(fpath, "w+")
+    fh.write(contents)
+    fh.close()
+    env_cpy = os.environ.copy()
+    fnull = open(os.devnull, 'w')
+    rc = subprocess.call(['bash', fpath], env=env_cpy, stdout=fnull, stderr=fnull)
+    os.remove(fpath)
+    return rc
+
 def program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port=0):
     sp = subprocess.Popen(qemu_cmd, env=qemu_env, cwd=vm_dir)
     print('QEMU Running at PID: {}'.format(str(sp.pid)))
@@ -298,10 +309,8 @@ def program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port=0):
     return sp
 
 def program_subprocess_fix_smb():
-    env_cpy = os.environ.copy()
-    script_fpath="/tmp/qemurun_{}.sh".format(str(uuid.uuid4()))
-    script_contents = """#!/bin/bash
-        while true; do
+    time.sleep(5)
+    script = """#!/bin/bash
         smb_dir=$(ls /tmp | grep qemu-smb | head -n1)
         if [ "$smb_dir" != "" ]; then
             smb_dir="/tmp/$smb_dir" 
@@ -313,30 +322,17 @@ def program_subprocess_fix_smb():
                 acl allow execute always = yes" >> "$smb_dir/smb.conf"
             #smbcontrol --configfile=$conf $pid reload-config
             exit 0
-        fi
-        sleep 5s
-        done"""
-    script_fh = open(script_fpath, "w+")
-    script_fh.write(script_contents)
-    script_fh.close()
-    subprocess.call(['chmod', '0744', script_fpath])
-    subprocess.Popen(['bash', script_fpath], env=env_cpy).wait()
-    os.remove(script_fpath)
+        fi"""
+    return execute_bash_code(script)
 
-def program_change_vnc_pwd(args):
+def program_subprocess_change_vnc_pwd(args):
     time.sleep(5)
-    env_cpy = os.environ.copy()
-    script_fpath="/tmp/qemurun_{}.sh".format(str(uuid.uuid4()))
-    script_contents= """#!/bin/bash
+    script = """#!/bin/bash
     vnc_pwd='@vnc_pwd@'
-    printf "change vnc password\\n%s\\n" $vnc_pwd"""
-    script_contents.replace("@vnc_pwd@", args['vnc_pwd'])
-    script_fh = open(script_fpath, "w+")
-    script_fh.write(script_contents)
-    script_fh.close()
-    subprocess.call(['chmod', '0744', script_fpath])
-    subprocess.Popen(['nc.traditional', '127.0.0.1', str(args['telnet_port']), '-e', script_fpath], env=env_cpy).wait()
-    os.remove(script_fpath)
+    printf "change vnc password\n%s\nexit\n" $vnc_pwd | nc 127.0.0.1 @telnet_port@"""
+    script = script.replace("@vnc_pwd@", args['vnc_pwd'])
+    script = script.replace("@telnet_port@", str(args['telnet_port']))
+    return execute_bash_code(script)
 
 def program_main():
     print("qemu-run. Forever beta software. Use on production on your own risk!\n")
@@ -363,7 +359,7 @@ def program_main():
         args = {}
         args['vnc_pwd'] = cfg['vnc_pwd']
         args['telnet_port'] = telnet_port
-        spawn_daemon(program_change_vnc_pwd, args)
+        spawn_daemon(program_subprocess_change_vnc_pwd, args)
     program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port).wait()
 
 if __name__ == '__main__':
