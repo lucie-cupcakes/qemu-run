@@ -17,10 +17,12 @@ class InfoMsg:
 class ReturnCode:
 	def __init__(self, ok=True, msg=None): #op_success = Boolean, infomsg = InfoMsg class.
 		self.ok = ok
-		self.msg = msg
+		self.msgs = []
+		if msg != None:
+			self.msgs.append(msg)
 	def set_error(self, err_msg):
 		self.ok = False
-		self.msg = err_msg
+		self.msgs.append(err_msg)
 
 #My replacement for configobj, fuck that shit.
 def load_cfg_process(res, lines):
@@ -170,7 +172,7 @@ def program_get_cfg_values(vm_dir):
 			rc.set_error(InfoMsg('Info: Using configuration from arguments.', InfoMsgType.im_info))
 			
 			if arg_cfg_str.strip() == '':
-				rc.set_error(InfoMsg('Error: argument cfg is empty.', InfoMsgType.im_info))
+				rc.set_error(InfoMsg('Error: argument cfg is empty.'))
 				return rc, None
 
 			cfg = load_cfg_from_args()
@@ -267,11 +269,12 @@ def program_build_cmd_line(cfg, vm_name, vm_dir):
 
 def program_handle_rc(rc):
 	if rc.ok == False:
-		if rc.msg.msg_type == InfoMsgType.im_error:
-			print(rc.msg.msg_txt)
-			exit()
-		elif rc.msg.msg_type == InfoMsgType.im_warning or rc.msg.msg_type == InfoMsgType.im_info:
-			print(rc.msg.msg_txt)
+		for msg in rc.msgs:
+			if msg.msg_type == InfoMsgType.im_error:
+				print(msg.msg_txt)
+				exit()
+			elif msg.msg_type == InfoMsgType.im_warning or msg.msg_type == InfoMsgType.im_info:
+				print(msg.msg_txt)
 
 def program_subprocess_qemu(qemu_cmd, qemu_env, vm_dir, telnet_port=0):
 	sp = subprocess.Popen(qemu_cmd, env=qemu_env, cwd=vm_dir)
