@@ -179,7 +179,7 @@ def program_get_cfg_values(vm_dir):
                 rc.set_error(InfoMsg('Error: argument cfg is empty.'))
                 return rc, None
 
-            cfg = load_cfg_from_args(arg_cfg_str)
+            cfg = load_cfg_from_args(arg_cfg_str, cfg)
         else:
             rc.set_error(InfoMsg('Cannot find config file.'))
 
