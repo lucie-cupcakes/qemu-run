@@ -32,7 +32,10 @@ def load_cfg_process(res, lines):
     for line in lines:
         if line.find('=') != -1:
             sline = line.split('=')
-            res[sline[0].strip()] = sline[1].strip()
+            key = sline[0].strip()
+            if key.find('#') == -1:
+                value = sline[1].strip()
+                res[key] = value
     return res
 
 def load_cfg_from_file(fpath, defaults=None): # defaults must be a dictionary..
@@ -226,6 +229,8 @@ def program_build_cmd_line(cfg, vm_name, vm_dir):
 
     telnet_port = 0
 
+    qemu_cmd += ['-vga', cfg['vga']]
+
     if cfg['headless'].lower() == 'yes':
         telnet_port = get_usable_port()
         qemu_cmd += ['-monitor', 'telnet:127.0.0.1:{},server,nowait'.format(telnet_port)]
@@ -237,7 +242,6 @@ def program_build_cmd_line(cfg, vm_name, vm_dir):
 
         qemu_cmd += ['-display', 'none']
     else:
-        qemu_cmd += ['-vga', cfg['vga']]
         if cfg['host_video_acc'].lower() == 'yes':
             qemu_cmd += ['-display', 'gtk,gl=on']
         else:
