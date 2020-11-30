@@ -166,9 +166,13 @@ def program_get_cfg_values(vm_dir):
 		cfg = load_cfg_from_file(vm_cfg_file_path, cfg)
 	else:
 		if detect_if_cfg_is_in_args() == True:
-			arg_v = sys.argv[1].split('--cfg=')[1]
-			print(arg_v)
-			exit()
+			arg_cfg_str = sys.argv[1].split('--cfg=')[1]
+			rc.set_error(InfoMsg('Info: Using configuration from arguments.', InfoMsgType.im_info))
+			
+			if arg_cfg_str.strip() == '':
+				rc.set_error(InfoMsg('Error: argument cfg is empty.', InfoMsgType.im_info))
+				return rc, None
+
 			cfg = load_cfg_from_args()
 		else:
 			rc.set_error(InfoMsg('Cannot find config file.'))
