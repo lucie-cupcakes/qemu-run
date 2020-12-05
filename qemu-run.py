@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+"""Copyright (C) 2020 Lucie Cupcakes <lucie_linux [at] protonmail.com>
+This file is part of qemu-run <https://gitlab.com/lucie_cupcakes/pybd>.
+qemu-run is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 3, or (at your option) any later
+version.
+qemu-run is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+You should have received a copy of the GNU General Public License
+along with qemu-run; see the file LICENSE.  If not see <http://www.gnu.org/licenses/>."""
+
 # Shared folders: Needs smbd and gawk
 import os, sys, errno
 import socket, subprocess, time
@@ -340,6 +353,8 @@ def program_subprocess_change_vnc_pwd(args):
 
 def program_main():
     print("qemu-run. Forever beta software. Use on production on your own risk!\n")
+    print('This software is Free software - released under the GPLv3 License.')
+    print('Read the LICENSE file. Or go visit https://www.gnu.org/licenses/gpl-3.0.html\n')
 
     fun1_rc, vm_name, vm_dir = program_find_vm_location()
     program_handle_rc(fun1_rc)
