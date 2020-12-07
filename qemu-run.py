@@ -289,10 +289,10 @@ def execute_bash_code(contents):
     os.remove(fpath)
     return rc
 
-def program_subprocess_qemu(qemu_cmd,args):
-    sp=subprocess.Popen(qemu_cmd,env=args['env'],cwd=args['vm_dir'])
+def program_subprocess_qemu(args):
+    sp=subprocess.Popen(args['qemu_cmd'],env=args['qemu_env'],cwd=args['vm_dir'])
     print('QEMU Running at PID: {}'.format(str(sp.pid)))
-    if telnet_port!=0:
+    if args['telnet_port']!=0:
         print('Telnet monitor port: {}'.format(str(args['telnet_port'])))
     return sp
 
@@ -330,6 +330,7 @@ def program_main():
     program_handle_rc(rc)
     rc,cfg=program_get_cfg_values(vm_dir)
     program_handle_rc(rc)
+    telnet_port=0
     rc,qemu_cmd,telnet_port=program_build_cmd_line(cfg,vm_name,vm_dir)
     program_handle_rc(rc)
     qemu_env=os.environ.copy()
@@ -346,10 +347,11 @@ def program_main():
         args['telnet_port']=telnet_port
         spawn_daemon(program_subprocess_change_vnc_pwd,args)
     args={}
+    args['qemu_cmd']=qemu_cmd
     args['qemu_env']=qemu_env
     args['vm_dir']=vm_dir
     args['telnet_port']=telnet_port
-    spawn_daemon(program_subprocess_qemu(qemu_cmd,args))
+    spawn_daemon(program_subprocess_qemu, args)
 
 if __name__=='__main__':
     program_main()
