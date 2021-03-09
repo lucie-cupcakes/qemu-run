@@ -176,6 +176,7 @@ def program_get_cfg_values(vm_dir):
     cfg['headless']='no'
     cfg['vnc_pwd']=''
     cfg['monitor_port']=5510
+    cfg['floppy']='{}/floppy'.format(vm_dir) if os.path.isfile('{}/floppy'.format(vm_dir)) else 'No'
     cfg['cdrom']='{}/cdrom'.format(vm_dir) if os.path.isfile('{}/cdrom'.format(vm_dir)) else 'No'
     cfg['disk']='{}/disk'.format(vm_dir) if os.path.isfile('{}/disk'.format(vm_dir)) else 'No'
     if os.path.exists('{}/{}'.format(vm_dir,cfg['shared'])):
@@ -218,7 +219,7 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
         qemu_cmd+=['-L','/usr/share/qemu','-bios','OVMF.fd']
     if not (cfg['cpu'].lower()=='host' and cfg['acc'].lower()!='yes'):
         qemu_cmd+=['-cpu',cfg['cpu']]
-    pulseaudio_socket='/run/pulse/native'
+    #pulseaudio_socket='/run/pulse/native'
     # pulseaudio_socket='/run/user/' + current_user_id + '/pulse/native'
     qemu_cmd+=['-smp',cfg['cores'],
                 '-m',cfg['mem'],
@@ -226,8 +227,8 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
                 '-usb','-device','usb-tablet']
     if cfg['snd'].lower()!='no':
         qemu_cmd+=['-soundhw',cfg['snd']]
-        if qemu_ver[0] >= 4:
-            qemu_cmd+=['-audiodev','pa,id=pa1,server=' + pulseaudio_socket]
+        #if qemu_ver[0] >= 4:
+            #qemu_cmd+=['-audiodev','pa,id=pa1,server=' + pulseaudio_socket]
     qemu_cmd+=['-vga',cfg['vga']]
     if cfg['headless'].lower()=='yes':
         telnet_port=get_usable_port()
@@ -255,16 +256,20 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
             else:   # Else use the same port for Host and Guest.
                 fwd_ports_str+=',hostfwd=tcp::{}-:{},hostfwd=udp::{}-:{}'.format(pair_str,pair_str,pair_str,pair_str);
     qemu_cmd+=['-nic','user,model={}{}{}'.format(cfg['net'],sf_str,fwd_ports_str)]
+    if os.path.isfile(cfg['floppy']):
+        qemu_cmd+=['-drive','index={},file={},if=floppy,format=raw'.format(str(drive_index), cfg['floppy'])]
+        drive_index+=1
+    if os.path.isfile(cfg['cdrom']):
+        qemu_cmd+=['-drive','index={},file={},media=cdrom,'.format(str(drive_index), cfg['cdrom'])]
+        drive_index+=1
     if os.path.isfile(cfg['disk']):
         hdd_fmt=get_disk_format(cfg['disk'])
         hdd_virtio=''
         if cfg['hdd_virtio'].lower()=='yes':
             hdd_virtio=',if=virtio'
-        qemu_cmd+=['-drive','file={},format={}{},index={}'.format(cfg['disk'],hdd_fmt,hdd_virtio,str(drive_index))]
+        qemu_cmd+=['-drive','index={},file={},format={}{}'.format(str(drive_index),cfg['disk'],hdd_fmt,hdd_virtio)]
         drive_index+=1
-    if os.path.isfile(cfg['cdrom']):
-        qemu_cmd+=['-drive','file={},media=cdrom,index={}'.format(cfg['cdrom'],str(drive_index))]
-        drive_index+=1
+    
     if cfg['localtime']=='Yes':
         qemu_cmd+=['-rtc','base=localtime']
     return rc,qemu_cmd,telnet_port
@@ -312,6 +317,7 @@ def program_subprocess_fix_smb():
             exit 0
         fi"""
     return execute_bash_code(script)
+    #return True
 
 def program_subprocess_change_vnc_pwd(args):
     time.sleep(5)
@@ -335,7 +341,7 @@ def program_main():
     program_handle_rc(rc)
     qemu_env=os.environ.copy()
     qemu_env['SDL_VIDEO_X11_DGAMOUSE']='0'
-    qemu_env['QEMU_AUDIO_DRV']='pa'
+    #qemu_env['QEMU_AUDIO_DRV']='pa'
     #qemu_env['QEMU_PA_SERVER']=pulseaudio_socket
     print('Command line arguments:')
     print(*qemu_cmd)
