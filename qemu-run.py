@@ -41,7 +41,7 @@ class ReturnCode:
 def load_cfg_process(res,lines):
     for line in lines:
         if line.find('=')!=-1:
-            sline=line.split('=')
+            sline=line.split('=', 1)
             key=sline[0].strip()
             if key.find('#')==-1:
                 value=sline[1].strip()
@@ -98,18 +98,6 @@ def spawn_daemon(func,args=None):
     else:
         func()
     os._exit(os.EX_OK)
-    
-def get_qemu_version():
-    result=[]
-    str_ver=subprocess.check_output(['qemu-system-i386','--version']).decode(sys.stdout.encoding).strip()
-    str_ver=str_ver.splitlines()[0].lower() # grab first line
-    #check for shit added by distros : for example: '(Debian)'
-    if str_ver.find('(')!=-1:
-        str_ver=str_ver.split('(')[0].strip()
-    str_ver=str_ver.split('version')[1].strip().split('.')
-    for i in str_ver: #convert array<str> to array<int>
-        result.append(int(i))
-    return result
 
 def get_usable_port():
     port=0
@@ -125,6 +113,14 @@ def detect_if_cfg_is_in_args():
         if sys.argv[1].find('--cfg=')!=-1:
             res=True
     return res
+    
+def check_if_file_exists_in_path(fname, resolve=False):
+    env_path=os.environ['PATH'].split(':')
+    for p in env_path:
+        fpath='{}/{}'.format(p,fname)
+        if os.path.isfile(fpath):
+          return fpath if resolve else True  
+    return '' if resolve else False
 
 def program_find_vm_location():
     # return values=
@@ -138,13 +134,13 @@ def program_find_vm_location():
     else:
         if detect_if_cfg_is_in_args()==True:
             vm_dir=os.getcwd()
-            vm_name="QEMU-VM"
+            vm_name='QEMU-VM'
         else:
             # Normal lookup using ENV var
             try:
-                vm_dir_env=os.environ["QEMURUN_VM_PATH"].split(":")
+                vm_dir_env=os.environ['QEMURUN_VM_PATH'].split(':')
             except:
-                rc.set_error(InfoMsg("Cannot find environment variable QEMURUN_VM_PATH.\nPython error \#%d (%s)" % (e.errno,e.strerror)))
+                rc.set_error(InfoMsg('Cannot find environment variable QEMURUN_VM_PATH.\nPython error \#%d (%s)' % (e.errno,e.strerror)))
             vm_name=sys.argv[1]
             for p in vm_dir_env:
                 vm_dir='{}/{}'.format(p,vm_name)
@@ -157,7 +153,8 @@ def program_find_vm_location():
 def program_get_cfg_values(vm_dir):
     rc=ReturnCode()
     cfg={}
-    cfg['sys']='x64'
+    cfg['*']=''
+    cfg['sys']='x86_64'
     cfg['uefi']='no'
     cfg['cpu']='host'
     cfg['cores']=subprocess.check_output(['nproc']).decode(sys.stdout.encoding).strip()
@@ -203,32 +200,26 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
     sf_str=''
     fwd_ports_str=''
     qemu_cmd=[]
-    qemu_ver=get_qemu_version()
-    current_user_id=str(subprocess.check_output(['id','-u'],universal_newlines=True).rstrip())
-    if cfg['sys']=='x32':
-        qemu_cmd.append('qemu-system-i386')
-    elif cfg['sys']=='x64':
-        qemu_cmd.append('qemu-system-x86_64')
+    qemu_bin='qemu-system-{}'.format(cfg['sys'].lower())
+    vm_is_x86=cfg['sys'].lower()=='x86_64' or cfg['sys'].lower()=='i386'
+    if check_if_file_exists_in_path(qemu_bin): 
+        qemu_cmd.append(qemu_bin)
     else:
         rc.set_error(InfoMsg('Invalid sys value.'))
-    if cfg['acc'].lower()=='yes':
+    if cfg['acc'].lower()=='yes' and vm_is_x86:
         qemu_cmd.append('--enable-kvm')
     if vm_name!='':
         qemu_cmd+=['-name',vm_name]
     if cfg['uefi'].lower()=='yes':
         qemu_cmd+=['-L','/usr/share/qemu','-bios','OVMF.fd']
-    if not (cfg['cpu'].lower()=='host' and cfg['acc'].lower()!='yes'):
+    if not (cfg['cpu'].lower()=='host' and vm_is_x86==False):
         qemu_cmd+=['-cpu',cfg['cpu']]
-    #pulseaudio_socket='/run/pulse/native'
-    # pulseaudio_socket='/run/user/' + current_user_id + '/pulse/native'
     qemu_cmd+=['-smp',cfg['cores'],
                 '-m',cfg['mem'],
                 '-boot','order=' + cfg['boot'],
                 '-usb','-device','usb-tablet']
     if cfg['snd'].lower()!='no':
         qemu_cmd+=['-soundhw',cfg['snd']]
-        #if qemu_ver[0] >= 4:
-            #qemu_cmd+=['-audiodev','pa,id=pa1,server=' + pulseaudio_socket]
     qemu_cmd+=['-vga',cfg['vga']]
     if cfg['headless'].lower()=='yes':
         telnet_port=get_usable_port()
@@ -257,10 +248,10 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
                 fwd_ports_str+=',hostfwd=tcp::{}-:{},hostfwd=udp::{}-:{}'.format(pair_str,pair_str,pair_str,pair_str);
     qemu_cmd+=['-nic','user,model={}{}{}'.format(cfg['net'],sf_str,fwd_ports_str)]
     if os.path.isfile(cfg['floppy']):
-        qemu_cmd+=['-drive','index={},file={},if=floppy,format=raw'.format(str(drive_index), cfg['floppy'])]
+        qemu_cmd+=['-drive','index={},file={},if=floppy,format=raw'.format(str(drive_index),cfg['floppy'])]
         drive_index+=1
     if os.path.isfile(cfg['cdrom']):
-        qemu_cmd+=['-drive','index={},file={},media=cdrom,'.format(str(drive_index), cfg['cdrom'])]
+        qemu_cmd+=['-drive','index={},file={},media=cdrom'.format(str(drive_index),cfg['cdrom'])]
         drive_index+=1
     if os.path.isfile(cfg['disk']):
         hdd_fmt=get_disk_format(cfg['disk'])
@@ -269,9 +260,10 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
             hdd_virtio=',if=virtio'
         qemu_cmd+=['-drive','index={},file={},format={}{}'.format(str(drive_index),cfg['disk'],hdd_fmt,hdd_virtio)]
         drive_index+=1
-    
     if cfg['localtime']=='Yes':
         qemu_cmd+=['-rtc','base=localtime']
+    if cfg['*']!='':
+        qemu_cmd+=cfg['*'].split(' ')
     return rc,qemu_cmd,telnet_port
 
 def program_handle_rc(rc):
@@ -341,8 +333,6 @@ def program_main():
     program_handle_rc(rc)
     qemu_env=os.environ.copy()
     qemu_env['SDL_VIDEO_X11_DGAMOUSE']='0'
-    #qemu_env['QEMU_AUDIO_DRV']='pa'
-    #qemu_env['QEMU_PA_SERVER']=pulseaudio_socket
     print('Command line arguments:')
     print(*qemu_cmd)
     if os.path.exists(cfg['shared']):
