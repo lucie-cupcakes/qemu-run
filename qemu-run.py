@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Copyright (C) 2020 Lucie Cupcakes <lucie_linux [at] protonmail.com>
-This file is part of qemu-run <https://gitlab.com/lucie_cupcakes/pybd>.
+This file is part of qemu-run <https://github.com/lucie-cupcakes/qemu-run>.
 qemu-run is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation; either version 3, or (at your option) any later
