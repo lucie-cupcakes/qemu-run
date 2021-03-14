@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Copyright (C) 2020 Lucie Cupcakes <lucie_linux [at] protonmail.com>
+"""Copyright (C) 2021 Lucie Cupcakes <lucie_linux [at] protonmail.com>
 This file is part of qemu-run <https://github.com/lucie-cupcakes/qemu-run>.
 qemu-run is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -11,6 +11,9 @@ FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
 You should have received a copy of the GNU General Public License
 along with qemu-run; see the file LICENSE.  If not see <http://www.gnu.org/licenses/>."""
+
+# I'm being replaced with a C programming language version!
+# https://gitlab.com/lucie_cupcakes/qemu-run-ng
 
 # Shared folders: Needs smbd and gawk
 import os,sys,errno,socket,subprocess,time,base64,uuid
@@ -200,20 +203,19 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
     sf_str=''
     fwd_ports_str=''
     qemu_cmd=[]
-    qemu_bin='qemu-system-{}'.format(cfg['sys'].lower())
-    vm_is_x86=cfg['sys'].lower()=='x86_64' or cfg['sys'].lower()=='i386'
-    if check_if_file_exists_in_path(qemu_bin): 
-        qemu_cmd.append(qemu_bin)
+    if cfg['sys'].lower() == 'x32':
+        qemu_cmd.append('qemu-system-i386')
+    elif cfg['sys'].lower() == 'x64':
+        qemu_cmd.append('qemu-system_x86_64')
     else:
         rc.set_error(InfoMsg('Invalid sys value.'))
-    if cfg['acc'].lower()=='yes' and vm_is_x86:
+    if cfg['acc'].lower()=='yes':
         qemu_cmd.append('--enable-kvm')
     if vm_name!='':
         qemu_cmd+=['-name',vm_name]
     if cfg['uefi'].lower()=='yes':
         qemu_cmd+=['-L','/usr/share/qemu','-bios','OVMF.fd']
-    if not (cfg['cpu'].lower()=='host' and vm_is_x86==False):
-        qemu_cmd+=['-cpu',cfg['cpu']]
+    qemu_cmd+=['-cpu',cfg['cpu']]
     qemu_cmd+=['-smp',cfg['cores'],
                 '-m',cfg['mem'],
                 '-boot','order=' + cfg['boot'],
@@ -254,13 +256,13 @@ def program_build_cmd_line(cfg,vm_name,vm_dir):
         qemu_cmd+=['-drive','index={},file={},media=cdrom'.format(str(drive_index),cfg['cdrom'])]
         drive_index+=1
     if os.path.isfile(cfg['disk']):
-        hdd_fmt=get_disk_format(cfg['disk'])
+        #hdd_fmt=get_disk_format(cfg['disk'])
         hdd_virtio=''
         if cfg['hdd_virtio'].lower()=='yes':
             hdd_virtio=',if=virtio'
-        qemu_cmd+=['-drive','index={},file={},format={}{}'.format(str(drive_index),cfg['disk'],hdd_fmt,hdd_virtio)]
+        qemu_cmd+=['-drive','index={},file={}{}'.format(str(drive_index),cfg['disk'],hdd_virtio)]
         drive_index+=1
-    if cfg['localtime']=='Yes':
+    if cfg['localtime'].lower()=='yes':
         qemu_cmd+=['-rtc','base=localtime']
     if cfg['*']!='':
         qemu_cmd+=cfg['*'].split(' ')
@@ -321,7 +323,7 @@ def program_subprocess_change_vnc_pwd(args):
     return execute_bash_code(script)
 
 def program_main():
-    print('qemu-run. Forever beta software. Use on production on your own risk!\n')
+    print('qemu-run. Forever beta software. Use on production on your own risk!')
     print('This software is Free software - released under the GPLv3 License.')
     print('Read the LICENSE file. Or go visit https://www.gnu.org/licenses/gpl-3.0.html\n')
     rc,vm_name,vm_dir=program_find_vm_location()
@@ -336,7 +338,7 @@ def program_main():
     print('Command line arguments:')
     print(*qemu_cmd)
     if os.path.exists(cfg['shared']):
-        spawn_daemon(program_subprocess_fix_smb)
+        (program_subprocess_fix_smb)
     if cfg['vnc_pwd']!='':
         args={}
         args['vnc_pwd']=cfg['vnc_pwd']
